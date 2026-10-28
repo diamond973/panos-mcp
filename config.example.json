@@ -1,0 +1,19 @@
+{
+  "devices": [
+    {
+      "name": "fw1",
+      "host": "192.0.2.10",
+      "api_key": "REPLACE_WITH_API_KEY",
+      "kind": "ngfw",
+      "verify_ssl": false,
+      "default": true
+    },
+    {
+      "name": "panorama",
+      "host": "192.0.2.20",
+      "api_key": "REPLACE_WITH_API_KEY",
+      "kind": "panorama",
+      "verify_ssl": false
+    }
+  ]
+}
