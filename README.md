@@ -23,7 +23,7 @@ tools:
 |------|--------------|--------|
 | `panos_list_devices` | List configured PAN-OS/Panorama devices and the server mode (read-only or write-enabled). | no |
 | `panos_system_info` | `show system info`: model, serial number, PAN-OS/Apps/Threat versions, uptime. | no |
-| `panos_op` | Run an operational command (`type=op`). Accepts XML or a simple CLI string (`show system resources`). Optional `target` serial to forward through Panorama. | no* |
+| `panos_op` | Run an operational command (`type=op`). Accepts XML or a simple CLI string (`show system resources`). Optional `target` serial to forward through Panorama. | partly* |
 | `panos_config` | Configuration by xpath (`type=config`). `get` reads the candidate, `show` reads running. `set`/`edit`/`delete`/`rename`/`move` need writes enabled. | set/edit/delete/rename/move |
 | `panos_logs` | Query logs: traffic, threat, url, wildfire, data, system, config, hipmatch, globalprotect, iptag, auth, decryption. PAN-OS filter syntax in `query`. Returns key fields only unless `full=true`. | no |
 | `panos_log_result` | Fetch a log query result by `job_id` when `panos_logs` gave up waiting. | no |
@@ -32,9 +32,9 @@ tools:
 | `panos_pending_changes` | Unified diff of candidate vs running (computed locally, since `show config diff` is not available over the XML API). | no |
 | `panos_commit` | Commit the candidate and wait for the job. `only_admins` makes it a partial commit. | yes |
 
-\* `panos_op` is not gated by the write flag. Operational commands that change state
-(`request ...`, `clear ...`) are possible through it, so give the API key an admin role
-that matches what you want the agent to be able to do.
+\* In read-only mode `panos_op` accepts only `show ...` and `test ...` commands. Anything else
+(`request ...`, `clear ...`, `debug ...`) needs `PANOS_ALLOW_WRITE=true`. Still give the API
+key an admin role that matches what you want the agent to be able to do.
 
 ## Safety model
 
@@ -155,7 +155,6 @@ python3 panos_mcp.py diff [name]     uncommitted candidate changes
 - Long log queries are polled for about 150 seconds; after that use `panos_log_result`.
 - Panorama commit-all / push to device groups is not implemented; `panos_commit` commits
   locally on the device it targets.
-- The commit description is inserted into the XML as is; avoid `<`, `>` and `&` in it.
 - TLS certificate verification is off unless `verify_ssl` is set, because most firewalls
   run with a self-signed management certificate.
 - The API key is stored in plain text in the config file. Protect the file and rotate the

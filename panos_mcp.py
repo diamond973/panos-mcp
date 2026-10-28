@@ -26,6 +26,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.dom.minidom
+from xml.sax.saxutils import escape as xml_escape
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -286,9 +287,23 @@ def t_system_info(args):
     return "\n".join(lines)
 
 
+# Op commands that only read state. Anything else (request, clear, debug, set...) needs write mode.
+READ_ONLY_OPS = {"show", "test"}
+
+
 def t_op(args):
-    dev = pick_device(args.get("device"))
     cmd = as_cmd(args["cmd"])
+    if not ALLOW_WRITE:
+        try:
+            top = ET.fromstring(cmd).tag
+        except ET.ParseError as e:
+            raise PanError(f"cmd is not valid XML: {e}")
+        if top not in READ_ONLY_OPS:
+            raise PanError(
+                f"op command '<{top}>' can change device state, but the server is read-only. "
+                "Only show/test commands are allowed without PANOS_ALLOW_WRITE=true."
+            )
+    dev = pick_device(args.get("device"))
     params = {"type": "op", "cmd": cmd}
     if args.get("target"):
         params["target"] = args["target"]
@@ -496,10 +511,10 @@ def t_commit(args):
         raise PanError("commit refused: the server is read-only (PANOS_ALLOW_WRITE is not set).")
     body = ""
     if args.get("description"):
-        body += f"<description>{args['description']}</description>"
+        body += f"<description>{xml_escape(args['description'])}</description>"
     admins = args.get("only_admins")
     if admins:
-        members = "".join(f"<member>{a}</member>" for a in admins)
+        members = "".join(f"<member>{xml_escape(a)}</member>" for a in admins)
         body += f"<partial><admin>{members}</admin></partial>"
     cmd = f"<commit>{body}</commit>"
     root = api(dev, {"type": "commit", "cmd": cmd})
